@@ -1,0 +1,728 @@
+﻿<Window x:Class="FutureCom.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:scott="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
+        xmlns:models="clr-namespace:FutureCom.Models"
+        Title="{Binding AppTitle}" 
+        Height="900" Width="1400"
+        Background="#0B0F19"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
+        <!-- 6px 极简圆角 ScrollBar -->
+        <Style x:Key="ModernScrollBarThumb" TargetType="Thumb">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border x:Name="thumbBorder" Background="#334155" CornerRadius="3" Margin="1"/>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="thumbBorder" Property="Background" Value="#475569"/>
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="True">
+                                <Setter TargetName="thumbBorder" Property="Background" Value="#2563EB"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ScrollBar">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Style.Triggers>
+                <Trigger Property="Orientation" Value="Vertical">
+                    <Setter Property="Width" Value="6"/>
+                    <Setter Property="MinWidth" Value="6"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ScrollBar">
+                                <Grid Background="Transparent" SnapsToDevicePixels="True">
+                                    <Track x:Name="PART_Track" IsDirectionReversed="True" Width="6">
+                                        <Track.Thumb>
+                                            <Thumb Style="{StaticResource ModernScrollBarThumb}"/>
+                                        </Track.Thumb>
+                                    </Track>
+                                </Grid>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ModernMenuSeparator" TargetType="Separator">
+            <Setter Property="Height" Value="1"/>
+            <Setter Property="Margin" Value="6,4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Separator">
+                        <Border Background="#2B394E" Height="1"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 顶级菜单项 -->
+        <ControlTemplate x:Key="TopLevelHeaderTemplate" TargetType="MenuItem">
+            <Border x:Name="RootBorder" Background="Transparent" CornerRadius="6" Padding="12,6" Margin="0,0,4,0">
+                <Grid>
+                    <ContentPresenter ContentSource="Header" TextBlock.Foreground="#FFFFFF" TextBlock.FontWeight="SemiBold"/>
+                    <Popup x:Name="PART_Popup" AllowsTransparency="True" IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}" Placement="Bottom" Focusable="False" PopupAnimation="Fade" Margin="0,4,0,0">
+                        <Border Background="#161F30" BorderBrush="#2D3D54" BorderThickness="1" CornerRadius="8" Padding="4,6" MinWidth="240">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="16" Direction="270" ShadowDepth="4" Opacity="0.45" Color="#000000"/>
+                            </Border.Effect>
+                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                        </Border>
+                    </Popup>
+                </Grid>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsHighlighted" Value="True">
+                    <Setter TargetName="RootBorder" Property="Background" Value="#223048"/>
+                </Trigger>
+                <Trigger Property="IsSubmenuOpen" Value="True">
+                    <Setter TargetName="RootBorder" Property="Background" Value="#2563EB"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="SubmenuItemTemplate" TargetType="MenuItem">
+            <Border x:Name="ItemBorder" Background="Transparent" CornerRadius="6" Padding="12,8" Margin="2,1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <ContentPresenter x:Name="Icon" ContentSource="Icon" Width="18" Height="18" Margin="0,0,10,0"/>
+                    <ContentPresenter Grid.Column="1" ContentSource="Header" TextBlock.Foreground="#F8FAFC" TextBlock.FontSize="13"/>
+                </Grid>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsHighlighted" Value="True">
+                    <Setter TargetName="ItemBorder" Property="Background" Value="#2563EB"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.45"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <Style TargetType="MenuItem">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Style.Triggers>
+                <Trigger Property="Role" Value="TopLevelHeader">
+                    <Setter Property="Template" Value="{StaticResource TopLevelHeaderTemplate}"/>
+                </Trigger>
+                <Trigger Property="Role" Value="SubmenuItem">
+                    <Setter Property="Template" Value="{StaticResource SubmenuItemTemplate}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="#1E293B"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#334155"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#334155"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#0F172A"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="#0F172A"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#334155"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6">
+                            <ScrollViewer x:Name="PART_ContentHost"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 全局现代化深色 ComboBox 样式 -->
+        <Style TargetType="ComboBox">
+            <Setter Property="Background" Value="#0F172A"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#334155"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <!-- ComboBoxItem 展开项深色样式 -->
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="#131D2E"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#2563EB"/>
+                    <Setter Property="Foreground" Value="#FFFFFF"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <DockPanel LastChildFill="True">
+            <!-- 1. 顶部纯净主菜单栏 -->
+            <Border DockPanel.Dock="Top" Background="#131D2E" Margin="15,12,15,10" CornerRadius="8" Padding="6,4" BorderBrush="#223048" BorderThickness="1">
+                <Menu Background="Transparent" Foreground="#FFFFFF" FontSize="13">
+                    <MenuItem Header="📁 文件(_F)">
+                        <MenuItem Header="📂 加载历史数据回放..." Command="{Binding LoadHistoryDataCommand}"/>
+                        <Separator Style="{StaticResource ModernMenuSeparator}"/>
+                        <MenuItem Header="📄 导出系统运行日志..." Command="{Binding ExportLogsCommand}"/>
+                        <Separator Style="{StaticResource ModernMenuSeparator}"/>
+                        <MenuItem Header="🚪 退出程序" Command="{Binding ExitAppCommand}"/>
+                    </MenuItem>
+
+                    <MenuItem Header="🔌 通信(_C)">
+                        <MenuItem Header="⚡ 连接串口 / 断开连接" Command="{Binding ToggleConnectCommand}"/>
+                        <MenuItem Header="🔄 刷新可用串口列表" Command="{Binding RefreshPortsCommand}"/>
+                        <Separator Style="{StaticResource ModernMenuSeparator}"/>
+                        <MenuItem Header="⚙️ RS-485 串口物理层参数..." Command="{Binding OpenSettingsCommand}"/>
+                    </MenuItem>
+
+                    <!-- 通道参数与控制 -->
+                    <MenuItem Header="🎛️ 通道参数(_M)">
+                        <MenuItem Header="🏷️ 快速设置通道数量 (1~16 通道)..." Command="{Binding OpenChannelCustomCommand}"/>
+                        <Separator Style="{StaticResource ModernMenuSeparator}"/>
+                        <MenuItem Header="4 通道模式 (默认)" Command="{Binding UpdateChannelCountCommand}" CommandParameter="4"/>
+                        <MenuItem Header="8 通道模式 (扩展)" Command="{Binding UpdateChannelCountCommand}" CommandParameter="8"/>
+                        <MenuItem Header="16 通道模式 (矩阵)" Command="{Binding UpdateChannelCountCommand}" CommandParameter="16"/>
+                        <Separator Style="{StaticResource ModernMenuSeparator}"/>
+                        <MenuItem Header="📊 重置丢包与通信统计" Command="{Binding ResetStatsCommand}"/>
+                    </MenuItem>
+
+                    <MenuItem Header="📈 曲线视图(_V)">
+                        <MenuItem Header="⚙️ 曲线多通道增益、偏置与色彩设置..." Command="{Binding OpenChartSettingsCommand}"/>
+                        <MenuItem Header="⛶ 切换曲线全屏监测模式 (F11)" Command="{Binding ToggleChartFullScreenCommand}"/>
+                        <Separator Style="{StaticResource ModernMenuSeparator}"/>
+                        <MenuItem Header="🧹 清空实时波形数据" Command="{Binding ClearChartCommand}"/>
+                        <MenuItem Header="🧹 清空运行终端日志" Command="{Binding ClearLogsCommand}"/>
+                    </MenuItem>
+
+                    <MenuItem Header="🤖 AI 智能(_A)">
+                        <MenuItem Header="✨ AI 智能协议推荐与自动匹配助手..." Command="{Binding OpenAiAdvisorCommand}"/>
+                    </MenuItem>
+
+                    <!-- 帮助与商业授权 -->
+                    <MenuItem Header="ℹ️ 帮助(_H)">
+                        <MenuItem Header="🔑 软件授权与密钥激活..." Command="{Binding OpenLicenseDialogCommand}"/>
+                        <MenuItem Header="🚀 检查新版本升级(_U)..." Command="{Binding CheckForUpdateCommand}"/>
+                        <Separator Style="{StaticResource ModernMenuSeparator}"/>
+                        <MenuItem Header="💡 关于 FutureCom" Command="{Binding OpenAboutCommand}"/>
+                    </MenuItem>
+                </Menu>
+            </Border>
+
+            <!-- 2. 底部状态栏 -->
+            <Border DockPanel.Dock="Bottom" Background="#131D2E" Padding="16,8" Margin="15,0,15,10" CornerRadius="8" BorderBrush="#223048" BorderThickness="1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Ellipse Width="8" Height="8" Margin="0,0,8,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="#64748B"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                            <Setter Property="Fill" Value="#10B981"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="{Binding StatusMessage}" Foreground="#CBD5E1" FontSize="12" FontWeight="SemiBold" Margin="0,0,20,0"/>
+                    </StackPanel>
+
+                    <TextBlock Grid.Column="1" Text="FutureCom 工业多协议智能串口监控平台 | 异步半双工通信" Foreground="#64748B" FontSize="12" VerticalAlignment="Center"/>
+
+                    <!-- 授权状态 -->
+                    <TextBlock Grid.Column="2" Text="{Binding LicenseStatusText}" Foreground="{Binding LicenseStatusColor}" FontSize="12" FontWeight="SemiBold" Margin="0,0,20,0" VerticalAlignment="Center"/>
+
+                    <TextBlock Grid.Column="3" Text="{Binding AppVersion, StringFormat='FutureCom {0}'}" Foreground="#94A3B8" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+
+            <!-- 3. 主体工作区 -->
+            <Grid Margin="15,0,15,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition x:Name="LeftCol" Width="420"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- ================= 左侧：三大核心监控栏目 ================= -->
+                <ScrollViewer Grid.Column="0" x:Name="LeftPanel" VerticalScrollBarVisibility="Auto" Margin="0,0,15,0">
+                    <StackPanel>
+                        <!-- 第一栏：每个通道的实时值看板 -->
+                        <Border Background="#131D2E" CornerRadius="10" Padding="14" Margin="0,0,0,12" BorderBrush="#223048" BorderThickness="1">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,10">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="🎛️ 多通道遥测实时值" FontSize="13" FontWeight="Bold" Foreground="#38BDF8"/>
+                                        <Border Background="#0C4A6E" CornerRadius="4" Padding="6,1" Margin="8,0,0,0">
+                                            <TextBlock Text="{Binding Channels.Count, StringFormat='{}{0} 通道'}" Foreground="#38BDF8" FontSize="11" FontWeight="Bold"/>
+                                        </Border>
+                                    </StackPanel>
+                                    <Button HorizontalAlignment="Right" Content="自定义通道" Command="{Binding OpenChannelCustomCommand}" FontSize="10" Padding="6,2" Height="22" Background="#1E293B" Foreground="#38BDF8"/>
+                                </Grid>
+
+                                <!-- 动态通道列表 -->
+                                <ItemsControl ItemsSource="{Binding Channels}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#0B0F19" CornerRadius="6" Padding="10,8" Margin="0,0,0,6" BorderBrush="#1E293B" BorderThickness="1">
+                                                <Grid>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+
+                                                    <Grid Grid.Row="0" Margin="0,0,0,4">
+                                                        <TextBlock Text="{Binding Name}" Foreground="{Binding ColorHex}" FontWeight="Bold" FontSize="12"/>
+                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                            <TextBlock Text="{Binding Value, StringFormat='{}{0:F2}'}" Foreground="#FFFFFF" FontWeight="Bold" FontSize="14" FontFamily="Consolas"/>
+                                                            <TextBlock Text="{Binding Unit, StringFormat=' {0}'}" Foreground="#94A3B8" FontSize="12" Margin="2,0,0,0"/>
+                                                        </StackPanel>
+                                                    </Grid>
+
+                                                    <!-- 量程进度条 -->
+                                                    <ProgressBar Grid.Row="1" Value="{Binding Percent}" Maximum="100" Height="4" Background="#1E293B" Foreground="{Binding ColorHex}" BorderThickness="0"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 第二栏：总数据报文流 -->
+                        <Border Background="#131D2E" CornerRadius="10" Padding="14" Margin="0,0,0,12" BorderBrush="#223048" BorderThickness="1">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,8">
+                                    <TextBlock Text="📟 总数据报文流 (十六进制 HEX)" FontSize="13" FontWeight="Bold" Foreground="#FDE047"/>
+                                </Grid>
+
+                                <Border Background="#0B0F19" CornerRadius="6" Padding="8" Margin="0,0,0,6" BorderBrush="#1E293B" BorderThickness="1">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                            <TextBlock Text="[TX 发送帧]" Foreground="#38BDF8" FontWeight="Bold" FontSize="11" FontFamily="Consolas"/>
+                                            <TextBlock Text="{Binding LatestTxLen, StringFormat=' ({0} 字节)'}" Foreground="#64748B" FontSize="11"/>
+                                        </StackPanel>
+                                        <TextBox Text="{Binding LatestTxHex}" IsReadOnly="True" Background="Transparent" Foreground="#E2E8F0" BorderThickness="0" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Background="#0B0F19" CornerRadius="6" Padding="8" BorderBrush="#1E293B" BorderThickness="1">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                            <TextBlock Text="[RX 应答总数据]" Foreground="#10B981" FontWeight="Bold" FontSize="11" FontFamily="Consolas"/>
+                                            <TextBlock Text="{Binding LatestRxLen, StringFormat=' ({0} 字节)'}" Foreground="#64748B" FontSize="11"/>
+                                        </StackPanel>
+                                        <TextBox Text="{Binding LatestRxHex}" IsReadOnly="True" Background="Transparent" Foreground="#A7F3D0" BorderThickness="0" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 第三栏：丢包率与分析 -->
+                        <Border Background="#131D2E" CornerRadius="10" Padding="14" BorderBrush="#223048" BorderThickness="1">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,10">
+                                    <TextBlock Text="⚠️ 通信质量与丢包/校验分析" FontSize="13" FontWeight="Bold" Foreground="#F8FAFC"/>
+                                    <Button HorizontalAlignment="Right" Content="重置统计" Command="{Binding ResetStatsCommand}" FontSize="10" Padding="6,2" Height="22" Background="#1E293B" Foreground="#94A3B8"/>
+                                </Grid>
+
+                                <UniformGrid Columns="2" Rows="2">
+                                    <Border Background="#0B0F19" CornerRadius="6" Padding="8" Margin="2" BorderBrush="#1E293B" BorderThickness="1">
+                                        <StackPanel>
+                                            <TextBlock Text="📉 丢包率 (Packet Loss)" Foreground="#64748B" FontSize="11"/>
+                                            <TextBlock Text="{Binding PacketLossRate, StringFormat='{}{0:F2} %'}" Foreground="#EF4444" FontSize="16" FontWeight="Bold" FontFamily="Consolas" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Background="#0B0F19" CornerRadius="6" Padding="8" Margin="2" BorderBrush="#1E293B" BorderThickness="1">
+                                        <StackPanel>
+                                            <TextBlock Text="❌ 校验失败 (CRC/Sum)" Foreground="#64748B" FontSize="11"/>
+                                            <TextBlock Text="{Binding CrcErrorCount, StringFormat='{}{0} 次'}" Foreground="#F59E0B" FontSize="16" FontWeight="Bold" FontFamily="Consolas" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Background="#0B0F19" CornerRadius="6" Padding="8" Margin="2" BorderBrush="#1E293B" BorderThickness="1">
+                                        <StackPanel>
+                                            <TextBlock Text="⏱ 通信超时 (Timeout)" Foreground="#64748B" FontSize="11"/>
+                                            <TextBlock Text="{Binding TimeoutErrorCount, StringFormat='{}{0} 次'}" Foreground="#A855F7" FontSize="16" FontWeight="Bold" FontFamily="Consolas" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Background="#0B0F19" CornerRadius="6" Padding="8" Margin="2" BorderBrush="#1E293B" BorderThickness="1">
+                                        <StackPanel>
+                                            <TextBlock Text="📶 通信成功率" Foreground="#64748B" FontSize="11"/>
+                                            <TextBlock Text="{Binding CommSuccessRate, StringFormat='{}{0:F1} %'}" Foreground="#34D399" FontSize="16" FontWeight="Bold" FontFamily="Consolas" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                </UniformGrid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- 右侧：波形图表 + 运行终端日志 -->
+                <Grid Grid.Column="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition x:Name="BottomLogRow" Height="240"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="#131D2E" CornerRadius="10" Padding="12" Margin="0,0,0,10" BorderBrush="#223048" BorderThickness="1">
+                        <DockPanel LastChildFill="True">
+                            <Grid DockPanel.Dock="Top" Margin="5,0,5,8">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="📈 全通道同屏实时波形流" FontWeight="Bold" Foreground="#FFFFFF" FontSize="14"/>
+                                    <TextBlock Text="(双击图表或按 F11 切换全屏)" Foreground="#64748B" FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Content="⚙️ 曲线设置..." Command="{Binding OpenChartSettingsCommand}" Background="#0D9488" Foreground="#FFFFFF" FontWeight="Bold" Height="26" FontSize="11" Margin="0,0,8,0"/>
+                                    <Button Content="🧹 清空图表" Command="{Binding ClearChartCommand}" Width="75" Height="26" FontSize="11" Margin="0,0,8,0"/>
+                                    <Button Content="{Binding FullScreenBtnText}" Command="{Binding ToggleChartFullScreenCommand}" Background="#7C3AED" Foreground="#FFFFFF" FontWeight="Bold" Height="26" FontSize="11" Padding="10,2"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <scott:WpfPlot x:Name="ChartPlot" MouseDoubleClick="ChartPlot_MouseDoubleClick"/>
+                        </DockPanel>
+                    </Border>
+
+                    <Border Grid.Row="1" x:Name="BottomLogBorder" Background="#131D2E" CornerRadius="10" Padding="14" BorderBrush="#223048" BorderThickness="1">
+                        <DockPanel LastChildFill="True">
+                            <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="💻 运行事件与遥测终端日志" FontWeight="Bold" Foreground="#FFFFFF" FontSize="13" VerticalAlignment="Center"/>
+                                    <Border Background="#1E293B" CornerRadius="4" Padding="6,2" Margin="10,0,0,0">
+                                        <TextBlock Text="{Binding Logs.Count, StringFormat='{}{0} 条记录'}" Foreground="#94A3B8" FontSize="11"/>
+                                    </Border>
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Content="🧹 清空" Command="{Binding ClearLogsCommand}" Width="65" Height="26" FontSize="11" Margin="0,0,8,0"/>
+                                    <Button Content="📄 导出" Command="{Binding ExportLogsCommand}" Width="65" Height="26" FontSize="11"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <Border Background="#080C14" CornerRadius="8" Padding="8" BorderBrush="#1E293B" BorderThickness="1">
+                                <ListBox x:Name="LogListBox" ItemsSource="{Binding Logs}" Background="Transparent" BorderThickness="0">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" Margin="0,2">
+                                                <TextBlock Text="{Binding Time, StringFormat='[{0}]'}" Foreground="#64748B" FontFamily="Consolas" FontSize="12" Margin="0,0,8,0"/>
+                                                <TextBlock Text="{Binding Level, StringFormat='[{0}]'}" Foreground="{Binding ColorHex}" FontWeight="Bold" FontFamily="Consolas" FontSize="12" Margin="0,0,8,0"/>
+                                                <TextBlock Text="{Binding Message}" Foreground="#F1F5F9" FontFamily="Consolas" FontSize="12"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Border>
+                        </DockPanel>
+                    </Border>
+                </Grid>
+            </Grid>
+        </DockPanel>
+
+        <!-- ================= 弹窗 1: 🔑 商业授权中心 (大圆角重构版) ================= -->
+        <Grid Background="#B0000000" Visibility="{Binding IsLicenseDialogOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Background="#131D2E" CornerRadius="16" Width="520" VerticalAlignment="Center" Padding="28" BorderBrush="#EAB308" BorderThickness="1.5">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="30" Direction="270" ShadowDepth="6" Opacity="0.6" Color="#000000"/>
+                </Border.Effect>
+                <StackPanel>
+                    <TextBlock Text="🔑 FutureCom 商业授权与在线密钥激活" FontSize="18" FontWeight="Bold" Foreground="#FACC15" Margin="0,0,0,16"/>
+                    <Border Background="#0B0F19" CornerRadius="10" Padding="14" BorderBrush="#1E293B" BorderThickness="1" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="本机唯一硬件机器码 (Machine Code):" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,6"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding MachineCode}" IsReadOnly="True" FontWeight="Bold" FontFamily="Consolas" FontSize="14" Foreground="#38BDF8"/>
+                                <Button Grid.Column="1" Content="📋 复制机器码" Command="{Binding CopyMachineCodeCommand}" Background="#1E293B" Margin="8,0,0,0" Padding="10,6"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                    <Border Background="#0B0F19" CornerRadius="10" Padding="14" BorderBrush="#1E293B" BorderThickness="1" Margin="0,0,0,20">
+                        <StackPanel>
+                            <TextBlock Text="输入您的专属激活密钥 (License Key):" Foreground="#CBD5E1" FontSize="13" Margin="0,0,0,6"/>
+                            <TextBox Text="{Binding InputLicenseKey}" Height="36" FontFamily="Consolas" FontSize="13" Foreground="#FFFFFF" Margin="0,0,0,10"/>
+                            <TextBlock Text="{Binding LicenseStatusText, StringFormat='当前授权状态: {0}'}" Foreground="{Binding LicenseStatusColor}" FontWeight="Bold" FontSize="12"/>
+                        </StackPanel>
+                    </Border>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="90"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="🚀 联网校验并立即激活授权" Command="{Binding ActivateLicenseCommand}" Background="#EAB308" Foreground="#0B0F19" FontWeight="Bold" Height="40" Margin="0,0,10,0"/>
+                        <Button Grid.Column="1" Content="关闭" Command="{Binding CloseLicenseDialogCommand}" Background="#334155" Foreground="#FFFFFF" Height="40"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- ================= 弹窗 2: 🎛️ 自定义通道数量 (大圆角重构版) ================= -->
+        <Grid Background="#B0000000" Visibility="{Binding IsChannelCustomDialogOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Background="#131D2E" CornerRadius="16" Width="580" VerticalAlignment="Center" Padding="28" BorderBrush="#0284C7" BorderThickness="1.5">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="30" Direction="270" ShadowDepth="6" Opacity="0.6" Color="#000000"/>
+                </Border.Effect>
+                <ScrollViewer MaxHeight="600" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock Text="🏷️ 遥测通道数量与参数自定义" FontSize="17" FontWeight="Bold" Foreground="#38BDF8" Margin="0,0,0,18"/>
+                        <Grid Margin="0,0,0,15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="通道总数量:" Foreground="#CBD5E1" VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Button Content="4 通道" Command="{Binding UpdateChannelCountCommand}" CommandParameter="4" Width="70" Margin="0,0,8,0"/>
+                                <Button Content="8 通道" Command="{Binding UpdateChannelCountCommand}" CommandParameter="8" Width="70" Margin="0,0,8,0"/>
+                                <Button Content="12 通道" Command="{Binding UpdateChannelCountCommand}" CommandParameter="12" Width="70" Margin="0,0,8,0"/>
+                                <Button Content="16 通道" Command="{Binding UpdateChannelCountCommand}" CommandParameter="16" Width="70"/>
+                            </StackPanel>
+                        </Grid>
+                        <Separator Style="{StaticResource ModernMenuSeparator}" Margin="0,0,0,14"/>
+                        <ItemsControl ItemsSource="{Binding Channels}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="50"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="50"/>
+                                            <ColumnDefinition Width="65"/>
+                                            <ColumnDefinition Width="50"/>
+                                            <ColumnDefinition Width="65"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Index, StringFormat='CH{0}:'}" Foreground="{Binding ColorHex}" FontWeight="Bold" VerticalAlignment="Center"/>
+                                        <TextBox Grid.Column="1" Text="{Binding Name}" Margin="0,0,6,0"/>
+                                        <TextBlock Grid.Column="2" Text="单位:" Foreground="#CBD5E1" VerticalAlignment="Center"/>
+                                        <TextBox Grid.Column="3" Text="{Binding Unit}" Margin="0,0,6,0"/>
+                                        <TextBlock Grid.Column="4" Text="满量程:" Foreground="#CBD5E1" VerticalAlignment="Center"/>
+                                        <TextBox Grid.Column="5" Text="{Binding Max}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Button Content="💾 保存并应用通道设置" Command="{Binding CloseChannelCustomCommand}" Background="#0284C7" Foreground="#FFFFFF" FontWeight="Bold" Height="40" Margin="0,15,0,0"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <!-- ================= 弹窗 3: 📈 曲线设置 (大圆角重构版) ================= -->
+        <Grid Background="#B0000000" Visibility="{Binding IsChartSettingsDialogOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Background="#131D2E" CornerRadius="16" Width="660" VerticalAlignment="Center" Padding="28" BorderBrush="#0D9488" BorderThickness="1.5">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="30" Direction="270" ShadowDepth="6" Opacity="0.6" Color="#000000"/>
+                </Border.Effect>
+                <ScrollViewer MaxHeight="600" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock Text="📈 曲线多通道增益、偏置与坐标轴设置" FontSize="17" FontWeight="Bold" Foreground="#2DD4BF" Margin="0,0,0,18"/>
+                        <Border Background="#0B0F19" CornerRadius="10" Padding="12" BorderBrush="#1E293B" BorderThickness="1" Margin="0,0,0,16">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="65"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="75"/>
+                                        <ColumnDefinition Width="75"/>
+                                        <ColumnDefinition Width="105"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="显示勾选" Foreground="#64748B" FontSize="11" FontWeight="Bold"/>
+                                    <TextBlock Grid.Column="1" Text="通道名称" Foreground="#64748B" FontSize="11" FontWeight="Bold"/>
+                                    <TextBlock Grid.Column="2" Text="增益(Gain)" Foreground="#64748B" FontSize="11" FontWeight="Bold"/>
+                                    <TextBlock Grid.Column="3" Text="偏置(Offset)" Foreground="#64748B" FontSize="11" FontWeight="Bold"/>
+                                    <TextBlock Grid.Column="4" Text="曲线色彩" Foreground="#64748B" FontSize="11" FontWeight="Bold"/>
+                                </Grid>
+                                <ItemsControl ItemsSource="{Binding Channels}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,0,0,6">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="65"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="75"/>
+                                                    <ColumnDefinition Width="75"/>
+                                                    <ColumnDefinition Width="105"/>
+                                                </Grid.ColumnDefinitions>
+                                                <CheckBox IsChecked="{Binding IsVisible}" Content="{Binding Index, StringFormat='CH{0}'}" Foreground="{Binding ColorHex}" FontWeight="Bold" VerticalAlignment="Center"/>
+                                                <TextBox Grid.Column="1" Text="{Binding Name}" Margin="0,0,6,0"/>
+                                                <TextBox Grid.Column="2" Text="{Binding Gain}" TextAlignment="Center" Margin="0,0,6,0"/>
+                                                <TextBox Grid.Column="3" Text="{Binding Offset}" TextAlignment="Center" Margin="0,0,6,0"/>
+                                                <ComboBox Grid.Column="4" ItemsSource="{Binding DataContext.ColorPaletteOptions, RelativeSource={RelativeSource AncestorType=Window}}" SelectedItem="{Binding ColorHex}"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                        <Button Content="💾 保存并应用曲线配置" Command="{Binding CloseChartSettingsCommand}" Background="#0D9488" Foreground="#FFFFFF" FontWeight="Bold" Height="40"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <!-- ================= 弹窗 4: ⚙️ 串口物理层与高级参数配置 (UI设计师极致重构版) ================= -->
+        <Grid Background="#99000000" Visibility="{Binding IsSettingsDialogOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Background="#131D2E" CornerRadius="16" Width="500" VerticalAlignment="Center" Padding="32" BorderBrush="#1E293B" BorderThickness="1.5">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="40" Direction="270" ShadowDepth="10" Opacity="0.75" Color="#000000"/>
+                </Border.Effect>
+                <StackPanel>
+                    <!-- 顶栏标题区 -->
+                    <Grid Margin="0,0,0,24">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border Background="#0C4A6E" CornerRadius="8" Width="36" Height="36" Margin="0,0,12,0">
+                                <TextBlock Text="⚙️" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel>
+                                <TextBlock Text="RS-485 串口物理层配置" FontSize="16" FontWeight="Bold" Foreground="#F8FAFC"/>
+                                <TextBlock Text="配置下位机通信端口及底层传输参数" FontSize="11" Foreground="#64748B" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- 表单项网格 -->
+                    <StackPanel>
+                        <!-- 通信端口 -->
+                        <Grid Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="130"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="通信端口 (Port)" Foreground="#94A3B8" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding AvailablePorts}" SelectedItem="{Binding SelectedPort}" Height="38"/>
+                        </Grid>
+
+                        <!-- 波特率 -->
+                        <Grid Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="130"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="波特率 (Baud)" Foreground="#94A3B8" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding BaudRateOptions}" SelectedItem="{Binding SelectedBaudRate}" Height="38"/>
+                        </Grid>
+
+                        <!-- 校验位 -->
+                        <Grid Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="130"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="校验位 (Parity)" Foreground="#94A3B8" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding ParityOptions}" SelectedItem="{Binding SelectedParity}" Height="38"/>
+                        </Grid>
+
+                        <!-- 数据位 -->
+                        <Grid Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="130"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="数据位 (DataBits)" Foreground="#94A3B8" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding DataBitsOptions}" SelectedItem="{Binding SelectedDataBits}" Height="38"/>
+                        </Grid>
+
+                        <!-- 停止位 -->
+                        <Grid Margin="0,0,0,24">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="130"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="停止位 (StopBits)" Foreground="#94A3B8" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding StopBitsOptions}" SelectedItem="{Binding SelectedStopBits}" Height="38"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- 底部按钮区 -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="100"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="保存并应用配置" Command="{Binding CloseSettingsCommand}" Background="#2563EB" Foreground="#FFFFFF" FontWeight="Bold" Height="42" Margin="0,0,12,0"/>
+                        <Button Grid.Column="1" Content="取消" Command="{Binding CloseSettingsCommand}" Background="#1E293B" Foreground="#94A3B8" FontWeight="SemiBold" Height="42"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- ================= 弹窗 5: AI 建议 (大圆角重构版) ================= -->
+        <Grid Background="#B0000000" Visibility="{Binding IsAiAdvisorDialogOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Background="#131D2E" CornerRadius="16" Width="560" VerticalAlignment="Center" Padding="28" BorderBrush="#4C1D95" BorderThickness="1.5">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="30" Direction="270" ShadowDepth="6" Opacity="0.6" Color="#000000"/>
+                </Border.Effect>
+                <StackPanel>
+                    <TextBlock Text="✨ AI 智能协议推荐与自动匹配助手" FontSize="17" FontWeight="Bold" Foreground="#C084FC" Margin="0,0,0,15"/>
+                    <Button Content="关闭" Command="{Binding CloseAiAdvisorCommand}" Background="#334155" Foreground="#FFFFFF" Height="40"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- ================= 弹窗 6: 关于 (大圆角重构版) ================= -->
+        <Grid Background="#B0000000" Visibility="{Binding IsAboutDialogOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Background="#131D2E" CornerRadius="16" Width="440" VerticalAlignment="Center" Padding="28" BorderBrush="#2D3D54" BorderThickness="1.5">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="30" Direction="270" ShadowDepth="6" Opacity="0.6" Color="#000000"/>
+                </Border.Effect>
+                <StackPanel>
+                    <TextBlock Text="⚡ FutureCom" FontSize="22" FontWeight="Bold" Foreground="#38BDF8"/>
+                    <TextBlock Text="{Binding AppVersion, StringFormat='版本号: {0} (Industrial Edition)'}" Foreground="#CBD5E1" FontWeight="SemiBold" Margin="0,6,0,18"/>
+                    <Button Content="关闭" Command="{Binding CloseAboutCommand}" Background="#334155" Foreground="#FFFFFF" Height="38"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
